@@ -1,0 +1,102 @@
+plugins {
+  id 'com.github.ben-manes.versions' version '0.13.0' // gradle dependencyUpdates
+  id 'pmd'
+
+  // we don’t need to *apply* the plugin to the root project, do we?
+  id 'com.github.spotbugs' version '4.7.0' apply false
+}
+
+apply plugin: 'java'
+apply plugin: 'jacoco'
+
+targetCompatibility = sourceCompatibility = JavaVersion.VERSION_1_8
+
+group = group
+
+jar {
+  version = version
+  baseName = baseName
+}
+
+repositories {
+  jcenter()
+  mavenCentral()
+}
+
+jacocoTestReport {
+    reports {
+        xml.enabled true
+        csv.enabled true
+        html.destination file("${buildDir}/reports/html/jacoco")
+        xml.destination file("${buildDir}/reports/xml/jacoco")
+        csv.destination file("${buildDir}/reports/csv/jacoco")
+    }
+}
+test {
+    doLast {
+        // copy all style and javascript files to get fancy report
+        def jbehave = "${classpath.find { it.name.contains('jbehave-core') }}"
+        def jbehaveStyle = "${classpath.find { it.name.contains('jbehave-navigator') }}"
+        copy {
+            from(zipTree(jbehave)) {
+                include "style/*"
+            }
+            into("build/jbehave/view")
+        }
+        copy {
+            from(zipTree(jbehaveStyle)) {
+                include "js/**/*"
+                include "style/**/*"
+                include "images/*"
+            }
+            into("build/jbehave/view")
+        }
+        copy {
+          from("target")
+          into("build")
+        }
+    }
+}
+
+def jbehaveVersion = '4.8.1'
+
+dependencies {
+  compileOnly 'org.projectlombok:lombok:1.18.22'
+  annotationProcessor 'org.projectlombok:lombok:1.18.22'
+
+  testCompileOnly 'org.projectlombok:lombok:1.18.22'
+  testAnnotationProcessor 'org.projectlombok:lombok:1.18.22'
+
+  testImplementation 'org.testng:testng:7.4.0'
+  implementation "org.springframework:spring-context:5.0.1.RELEASE"
+  testImplementation "org.springframework:spring-test:5.0.1.RELEASE"
+
+  testImplementation "org.jbehave:jbehave-core:${jbehaveVersion}"
+  testImplementation "org.jbehave:jbehave-navigator:${jbehaveVersion}"
+
+}
+
+apply plugin: 'com.github.spotbugs'
+spotbugs {
+    toolVersion = '4.2.2'
+    ignoreFailures = true
+    reportsDir = file("$project.buildDir/reports/findbugs")
+}
+
+tasks.withType(com.github.spotbugs.snom.SpotBugsTask) {
+    reports {
+        xml.enabled = false
+        html.enabled = true
+    }
+}
+
+// Configure PMD.
+pmd {
+    ignoreFailures = true
+    toolVersion = "6.23.0"                             // The version of PMD to use.
+    ruleSetFiles = files("config/pmd/pmd.xml")         // The location of the configuration file.
+    ruleSets = []                                      // Ignore the default rules. The ones this config
+                                                       // uses are set with the ruleSetFiles property.
+}
+
+defaultTasks "clean", "build"

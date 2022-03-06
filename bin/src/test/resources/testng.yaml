@@ -1,0 +1,5 @@
+name: SingleSuite
+tests:
+  - name: Regression2
+    classes:
+      - example.JBehaveTest
